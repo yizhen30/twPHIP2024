@@ -1,8 +1,9 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <%@ page import="java.sql.*"%>
 <jsp:useBean id='objDBConfig' scope='application' class='hitstd.group.tool.database.DBConfig' />
+
 <!DOCTYPE html>
-<html lang="zh-TW">
+<html>
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -24,67 +25,76 @@
             border-radius: 5px;
             box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
         }
-        h1, h2, h3 {
+        h1, h2 {
             color: #2c3e50;
         }
-        .card {
-            background-color: #fff;
-            border-radius: 5px;
-            padding: 20px;
+        .upload-section {
             margin-bottom: 20px;
-            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
-        }
-        .input-group {
-            margin-bottom: 15px;
-        }
-        label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: bold;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
         }
         input[type="file"] {
-            display: block;
-            width: 100%;
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            margin-bottom: 10px;
+            margin-right: 10px;
         }
         button {
+            padding: 8px 15px;
             background-color: #3498db;
             color: white;
             border: none;
-            padding: 10px 20px;
             border-radius: 4px;
             cursor: pointer;
-            font-size: 16px;
+            margin-right: 5px;
         }
         button:hover {
             background-color: #2980b9;
         }
-        button:disabled {
-            background-color: #95a5a6;
-            cursor: not-allowed;
+        #fileInfo {
+            margin: 10px 0;
+            font-style: italic;
         }
         .progress-container {
-            height: 20px;
-            background-color: #ecf0f1;
-            border-radius: 10px;
             margin: 15px 0;
-            overflow: hidden;
+            background-color: #eee;
+            border-radius: 10px;
+            height: 20px;
+            display: none;
         }
         .progress-bar {
             height: 100%;
-            background-color: #2ecc71;
             border-radius: 10px;
-            width: 0;
-            transition: width 0.3s ease;
+            background-color: #3498db;
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .result-section {
+            margin-top: 20px;
+        }
+        .tab-buttons {
+            margin-bottom: 15px;
+        }
+        .tab-button {
+            padding: 10px 15px;
+            border: none;
+            background-color: #f2f2f2;
+            cursor: pointer;
+            margin-right: 5px;
+            border-radius: 4px 4px 0 0;
+        }
+        .tab-button.active {
+            background-color: #3498db;
+            color: white;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin: 15px 0;
-            font-size: 14px;
+            margin-top: 15px;
         }
         th, td {
             border: 1px solid #ddd;
@@ -93,41 +103,43 @@
         }
         th {
             background-color: #f2f2f2;
-            font-weight: bold;
         }
         tr:nth-child(even) {
             background-color: #f9f9f9;
         }
-        .result-summary {
-            background-color: #edf7ff;
-            padding: 10px 15px;
-            border-radius: 4px;
-            margin-bottom: 15px;
+        #resultSummary {
+            margin: 10px 0;
             font-weight: bold;
         }
-        .action-buttons {
-            display: flex;
-            gap: 10px;
-            margin: 15px 0;
+        .export-btn {
+            margin-top: 15px;
+            background-color: #27ae60;
         }
-        .error {
+        .export-btn:hover {
+            background-color: #2ecc71;
+        }
+        .error-message {
             color: #e74c3c;
             background-color: #fadbd8;
             padding: 10px;
             border-radius: 4px;
             margin: 10px 0;
+            display: none;
         }
-        .success {
+        .success-message {
             color: #27ae60;
             background-color: #d4efdf;
             padding: 10px;
             border-radius: 4px;
             margin: 10px 0;
+            display: none;
         }
-        #loadingText {
-            text-align: center;
-            margin: 5px 0;
-            font-style: italic;
+        .info-panel {
+            background-color: #eaf2f8;
+            border-left: 4px solid #3498db;
+            padding: 10px 15px;
+            margin: 15px 0;
+            font-size: 14px;
         }
     </style>
 </head>
@@ -135,645 +147,721 @@
     <div class="container">
         <h1>鄉鎮人口統計Excel解析器</h1>
         
-        <div class="card">
-            <h2>選擇Excel檔案</h2>
-            <div class="input-group">
-                <label for="excelFile">選擇包含鄉鎮人口統計資料的Excel檔案 (.xls 或 .xlsx)</label>
-                <input type="file" id="excelFile" accept=".xls,.xlsx">
-            </div>
+        <div class="upload-section">
+            <h2>1. 選擇Excel檔案</h2>
+            <input type="file" id="excelFile" accept=".xls,.xlsx" />
             <button id="parseBtn">解析檔案</button>
-            
-            <div id="progressContainer" class="progress-container" style="display: none;">
-                <div id="progressBar" class="progress-bar"></div>
+            <div id="fileInfo"></div>
+            <div class="progress-container" id="progressContainer">
+                <div class="progress-bar" id="progressBar"></div>
             </div>
-            <div id="loadingText" style="display: none;">正在解析檔案，請稍候...</div>
-            <div id="errorMessage" class="error" style="display: none;"></div>
+            <div id="errorMessage" class="error-message"></div>
+            <div id="successMessage" class="success-message"></div>
         </div>
         
-        <div id="resultContainer" class="card" style="display: none;">
-            <h2>解析結果</h2>
-            <div id="fileInfo" class="result-summary"></div>
+        <div class="result-section" id="resultSection" style="display: none;">
+            <h2>2. 解析結果</h2>
+            <div id="resultSummary"></div>
             
-            <h3>資料預覽</h3>
-            <div style="overflow-x: auto;">
-                <table id="resultTable">
-                    <thead>
-                        <tr>
-                            <th>年分</th>
-                            <th>月份</th>
-                            <th>縣市別</th>
-                            <th>鄉鎮別</th>
-                            <th>性別</th>
-                            <th>人口數</th>
-                        </tr>
-                    </thead>
-                    <tbody id="resultBody"></tbody>
-                </table>
+            <div class="tab-buttons">
+                <button id="originalTabBtn" class="tab-button active">原始預覽</button>
+                <button id="unmergedTabBtn" class="tab-button">解除合併後預覽</button>
+                <button id="processedTabBtn" class="tab-button">處理後資料</button>
             </div>
             
-            <div class="action-buttons">
-                <button id="exportBtn">匯出CSV</button>
-                <button id="dbBtn">準備資料庫格式</button>
+            <div id="originalTab" class="tab-content active">
+                <div class="info-panel">
+                    顯示原始Excel檔案的預覽，包含合併儲存格。
+                </div>
+                <div class="table-container">
+                    <table id="originalTable"></table>
+                </div>
             </div>
             
-            <div id="successMessage" class="success" style="display: none;"></div>
-        </div>
-        
-        <div id="dbFormatContainer" class="card" style="display: none;">
-            <h2>資料庫匯入準備</h2>
-            <p>下列資料已經整理成適合資料庫匯入的格式：</p>
-            
-            <h3>1. 縣市資料表</h3>
-            <div style="overflow-x: auto;">
-                <table id="cityTable">
-                    <thead>
-                        <tr>
-                            <th>CityCode</th>
-                            <th>CityName</th>
-                        </tr>
-                    </thead>
-                    <tbody id="cityBody"></tbody>
-                </table>
+            <div id="unmergedTab" class="tab-content">
+                <div class="info-panel">
+                    顯示解除所有合併儲存格後的Excel預覽。
+                </div>
+                <div class="table-container">
+                    <table id="unmergedTable"></table>
+                </div>
             </div>
             
-            <h3>2. 鄉鎮資料表</h3>
-            <div style="overflow-x: auto;">
-                <table id="districtTable">
-                    <thead>
-                        <tr>
-                            <th>DistrictCode</th>
-                            <th>CityCode</th>
-                            <th>DistrictName</th>
-                        </tr>
-                    </thead>
-                    <tbody id="districtBody"></tbody>
-                </table>
+            <div id="processedTab" class="tab-content">
+                <div class="info-panel">
+                    顯示處理後的結構化資料。
+                </div>
+                <div class="table-container">
+                    <table id="processedTable">
+                        <thead>
+                            <tr>
+                                <th>年分</th>
+                                <th>月份</th>
+                                <th>縣市別</th>
+                                <th>鄉鎮別</th>
+                                <th>性別</th>
+                                <th>戶數</th>
+                                <th>人口數</th>
+                            </tr>
+                        </thead>
+                        <tbody id="processedBody"></tbody>
+                    </table>
+                </div>
             </div>
             
-            <h3>3. 人口統計資料</h3>
-            <div style="overflow-x: auto;">
-                <table id="populationTable">
-                    <thead>
-                        <tr>
-                            <th>YearID (民國年)</th>
-                            <th>MonthID</th>
-                            <th>CityCode</th>
-                            <th>DistrictCode</th>
-                            <th>Gender</th>
-                            <th>Population</th>
-                        </tr>
-                    </thead>
-                    <tbody id="populationBody"></tbody>
-                </table>
-            </div>
-            
-            <div class="action-buttons">
-                <button id="exportSqlBtn">匯出SQL指令</button>
-                <button id="backBtn">返回資料預覽</button>
+            <div style="margin-top: 15px;">
+                <button id="exportXLSX" class="export-btn">匯出 Excel</button>
             </div>
         </div>
     </div>
 
     <script>
-        // DOM元素
-        const excelFileInput = document.getElementById('excelFile');
-        const parseBtn = document.getElementById('parseBtn');
-        const progressContainer = document.getElementById('progressContainer');
-        const progressBar = document.getElementById('progressBar');
-        const loadingText = document.getElementById('loadingText');
-        const errorMessage = document.getElementById('errorMessage');
-        const resultContainer = document.getElementById('resultContainer');
-        const fileInfo = document.getElementById('fileInfo');
-        const resultBody = document.getElementById('resultBody');
-        const exportBtn = document.getElementById('exportBtn');
-        const dbBtn = document.getElementById('dbBtn');
-        const successMessage = document.getElementById('successMessage');
-        const dbFormatContainer = document.getElementById('dbFormatContainer');
-        const cityBody = document.getElementById('cityBody');
-        const districtBody = document.getElementById('districtBody');
-        const populationBody = document.getElementById('populationBody');
-        const exportSqlBtn = document.getElementById('exportSqlBtn');
-        const backBtn = document.getElementById('backBtn');
-
-        // 存儲解析後的資料
-        let parsedData = [];
-        let fileName = '';
-        let fileYear = '';
-        let fileMonth = '';
-        let cityData = [];
-        let districtData = [];
-        
-        // 設定按鈕事件
-        parseBtn.addEventListener('click', parseExcelFile);
-        exportBtn.addEventListener('click', exportToCsv);
-        dbBtn.addEventListener('click', showDbFormat);
-        backBtn.addEventListener('click', showResultView);
-        exportSqlBtn.addEventListener('click', exportSqlCommands);
-        
-        // 解析Excel文件
-        function parseExcelFile() {
-            const file = excelFileInput.files[0];
-            if (!file) {
-                showError('請選擇Excel檔案');
-                return;
-            }
+        document.addEventListener('DOMContentLoaded', function() {
+            // DOM 元素
+            var excelFileInput = document.getElementById('excelFile');
+            var parseBtn = document.getElementById('parseBtn');
+            var fileInfo = document.getElementById('fileInfo');
+            var progressContainer = document.getElementById('progressContainer');
+            var progressBar = document.getElementById('progressBar');
+            var errorMessage = document.getElementById('errorMessage');
+            var successMessage = document.getElementById('successMessage');
+            var resultSection = document.getElementById('resultSection');
+            var resultSummary = document.getElementById('resultSummary');
+            var originalTable = document.getElementById('originalTable');
+            var unmergedTable = document.getElementById('unmergedTable');
+            var processedBody = document.getElementById('processedBody');
+            var exportXLSXBtn = document.getElementById('exportXLSX');
+            var originalTabBtn = document.getElementById('originalTabBtn');
+            var unmergedTabBtn = document.getElementById('unmergedTabBtn');
+            var processedTabBtn = document.getElementById('processedTabBtn');
+            var originalTab = document.getElementById('originalTab');
+            var unmergedTab = document.getElementById('unmergedTab');
+            var processedTab = document.getElementById('processedTab');
             
-            // 檢查檔案類型
-            const fileExt = file.name.split('.').pop().toLowerCase();
-            if (fileExt !== 'xls' && fileExt !== 'xlsx') {
-                showError('請選擇正確的Excel檔案 (.xls 或 .xlsx)');
-                return;
-            }
+            // 存儲解析後的資料
+            var originalWorkbook = null;
+            var unmergedWorkbook = null;
+            var parsedData = [];
+            var fileName = '';
+            var fileYear = '';
+            var fileMonth = '';
             
-            // 開始解析
-            fileName = file.name;
-            showProgressBar();
-            hideError();
+            // 標籤切換
+            originalTabBtn.addEventListener('click', function() {
+                originalTabBtn.classList.add('active');
+                unmergedTabBtn.classList.remove('active');
+                processedTabBtn.classList.remove('active');
+                originalTab.classList.add('active');
+                unmergedTab.classList.remove('active');
+                processedTab.classList.remove('active');
+            });
             
-            const reader = new FileReader();
+            unmergedTabBtn.addEventListener('click', function() {
+                unmergedTabBtn.classList.add('active');
+                originalTabBtn.classList.remove('active');
+                processedTabBtn.classList.remove('active');
+                unmergedTab.classList.add('active');
+                originalTab.classList.remove('active');
+                processedTab.classList.remove('active');
+            });
             
-            reader.onload = function(e) {
-                try {
-                    const data = new Uint8Array(e.target.result);
-                    const workbook = XLSX.read(data, { type: 'array' });
-                    
-                    // 更新進度
-                    updateProgress(50);
-                    
-                    // 解析第一個工作表
-                    const firstSheetName = workbook.SheetNames[0];
-                    const worksheet = workbook.Sheets[firstSheetName];
-                    
-                    // 解析標題和年月
-                    const docInfo = parseDocumentInfo(worksheet);
-                    fileYear = docInfo.year;
-                    fileMonth = docInfo.month;
-                    
-                    // 解析資料
-                    parsedData = parseWorksheet(worksheet, docInfo);
-                    
-                    // 完成
-                    updateProgress(100);
-                    
-                    // 顯示結果
-                    displayResults(parsedData, docInfo);
-                    
-                } catch (error) {
-                    console.error('解析Excel時發生錯誤:', error);
-                    showError('解析檔案時發生錯誤: ' + error.message);
-                    hideProgressBar();
+            processedTabBtn.addEventListener('click', function() {
+                processedTabBtn.classList.add('active');
+                originalTabBtn.classList.remove('active');
+                unmergedTabBtn.classList.remove('active');
+                processedTab.classList.add('active');
+                originalTab.classList.remove('active');
+                unmergedTab.classList.remove('active');
+            });
+            
+            // 解析按鈕點擊事件
+            parseBtn.addEventListener('click', function() {
+                var file = excelFileInput.files[0];
+                if (!file) {
+                    showError('請先選擇Excel檔案');
+                    return;
                 }
-            };
-            
-            reader.onerror = function() {
-                showError('讀取檔案時發生錯誤');
-                hideProgressBar();
-            };
-            
-            reader.readAsArrayBuffer(file);
-        }
-        
-        // 解析文件標題及年月資訊
-        function parseDocumentInfo(worksheet) {
-            const range = XLSX.utils.decode_range(worksheet['!ref']);
-            let title = '';
-            let year = '';
-            let month = '';
-            
-            // 檢查第一行可能的標題
-            for (let c = range.s.c; c <= range.e.c; c++) {
-                const cellAddress = XLSX.utils.encode_cell({ r: 0, c });
-                const cell = worksheet[cellAddress];
-                if (cell && cell.v) {
-                    title = cell.v.toString().trim();
-                    
-                    // 嘗試從標題中提取年月
-                    const yearMonthMatch = title.match(/(\d+)年(\d+)月/);
-                    if (yearMonthMatch) {
-                        year = yearMonthMatch[1];  // 民國年
-                        month = yearMonthMatch[2];
-                    }
-                    
-                    break;
+                
+                fileName = file.name;
+                fileInfo.textContent = '檔案: ' + fileName + ' (' + (file.size / 1024).toFixed(2) + ' KB)';
+                
+                // 嘗試從檔名中提取年月
+                var regexResult = /(\d+)年(\d+)月/.exec(fileName);
+                if (regexResult) {
+                    fileYear = regexResult[1]; // 民國年
+                    fileMonth = regexResult[2];
+                    fileInfo.textContent += ' - 民國' + fileYear + '年' + fileMonth + '月資料';
                 }
-            }
-            
-            // 如果標題中沒有找到年月，嘗試從文件名中提取
-            if (!year || !month) {
-                const fileNameMatch = fileName.match(/(\d+)年(\d+)月/);
-                if (fileNameMatch) {
-                    year = fileNameMatch[1];
-                    month = fileNameMatch[2];
-                }
-            }
-            
-            return {
-                title: title,
-                year: year,
-                month: month
-            };
-        }
-        
-        // 解析工作表
-        function parseWorksheet(worksheet, docInfo) {
-            const result = [];
-            const range = XLSX.utils.decode_range(worksheet['!ref']);
-            let currentCity = '';
-            
-            // 識別資料欄位位置
-            const columns = findColumns(worksheet, range);
-            
-            // 從第4行開始處理資料 (基於截圖中的資料結構)
-            for (let r = 3; r <= range.e.r; r++) {
-                // 讀取區域別（縣市或鄉鎮）
-                const areaCellAddress = XLSX.utils.encode_cell({ r, c: columns.area });
-                const areaCell = worksheet[areaCellAddress];
                 
-                if (!areaCell) continue;
-                
-                const areaValue = areaCell.v.toString().trim();
-                
-                // 檢查是否為縣市名稱
-                if (areaValue.includes('市') || areaValue.includes('縣')) {
-                    currentCity = areaValue;
-                    
-                    // 讀取縣市層級的人口數
-                    const totalCellAddress = XLSX.utils.encode_cell({ r, c: columns.total });
-                    const maleCellAddress = XLSX.utils.encode_cell({ r, c: columns.male });
-                    const femaleCellAddress = XLSX.utils.encode_cell({ r, c: columns.female });
-                    
-                    const totalCell = worksheet[totalCellAddress];
-                    const maleCell = worksheet[maleCellAddress];
-                    const femaleCell = worksheet[femaleCellAddress];
-                    
-                    // 只有在人口數存在時才添加
-                    if (maleCell && femaleCell) {
-                        // 添加男性資料
-                        result.push({
-                            year: docInfo.year,
-                            month: docInfo.month,
-                            city: currentCity,
-                            district: '總計',
-                            gender: '男',
-                            population: maleCell.v
-                        });
-                        
-                        // 添加女性資料
-                        result.push({
-                            year: docInfo.year,
-                            month: docInfo.month,
-                            city: currentCity,
-                            district: '總計',
-                            gender: '女',
-                            population: femaleCell.v
-                        });
-                    }
-                }
-                // 處理鄉鎮層級
-                else if (currentCity && areaValue.includes('區')) {
-                    // 讀取鄉鎮層級的人口數
-                    const totalCellAddress = XLSX.utils.encode_cell({ r, c: columns.total });
-                    const maleCellAddress = XLSX.utils.encode_cell({ r, c: columns.male });
-                    const femaleCellAddress = XLSX.utils.encode_cell({ r, c: columns.female });
-                    
-                    const totalCell = worksheet[totalCellAddress];
-                    const maleCell = worksheet[maleCellAddress];
-                    const femaleCell = worksheet[femaleCellAddress];
-                    
-                    // 只有在人口數存在時才添加
-                    if (maleCell && femaleCell) {
-                        // 添加男性資料
-                        result.push({
-                            year: docInfo.year,
-                            month: docInfo.month,
-                            city: currentCity,
-                            district: areaValue,
-                            gender: '男',
-                            population: maleCell.v
-                        });
-                        
-                        // 添加女性資料
-                        result.push({
-                            year: docInfo.year,
-                            month: docInfo.month,
-                            city: currentCity,
-                            district: areaValue,
-                            gender: '女',
-                            population: femaleCell.v
-                        });
-                    }
-                }
-            }
-            
-            return result;
-        }
-        
-        // 查找各欄位位置
-        function findColumns(worksheet, range) {
-            let area = 0;  // 預設區域別在A欄
-            let total = -1;
-            let male = -1;
-            let female = -1;
-            
-            // 搜索第3行標題
-            for (let c = range.s.c; c <= range.e.c; c++) {
-                const cellAddress = XLSX.utils.encode_cell({ r: 2, c });
-                const cell = worksheet[cellAddress];
-                
-                if (cell && cell.v) {
-                    const value = cell.v.toString().trim();
-                    if (value === '計') {
-                        total = c;
-                    } else if (value === '男') {
-                        male = c;
-                    } else if (value === '女') {
-                        female = c;
-                    }
-                }
-            }
-            
-            return {
-                area: area,
-                total: total,
-                male: male,
-                female: female
-            };
-        }
-        
-        // 顯示解析結果
-        function displayResults(data, docInfo) {
-            // 更新檔案資訊
-            fileInfo.innerHTML = `
-                <div>檔案名稱: ${fileName}</div>
-                <div>資料時間: 民國 ${docInfo.year} 年 ${docInfo.month} 月</div>
-                <div>資料總筆數: ${data.length} 筆</div>
-            `;
-            
-            // 清空結果表格
-            resultBody.innerHTML = '';
-            
-            // 顯示前50筆資料
-            const previewData = data.slice(0, 50);
-            for (let i = 0; i < previewData.length; i++) {
-                const item = previewData[i];
-                const row = document.createElement('tr');
-                
-                row.innerHTML = `
-                    <td>${item.year}</td>
-                    <td>${item.month}</td>
-                    <td>${item.city}</td>
-                    <td>${item.district}</td>
-                    <td>${item.gender}</td>
-                    <td>${item.population}</td>
-                `;
-                
-                resultBody.appendChild(row);
-            }
-            
-            // 顯示結果容器
-            hideProgressBar();
-            resultContainer.style.display = 'block';
-            
-            // 如果資料超過50筆，顯示提示
-            if (data.length > 50) {
-                showSuccess(`僅顯示前50筆資料，實際共有 ${data.length} 筆資料`);
-            } else {
+                hideError();
                 hideSuccess();
-            }
-        }
-        
-        // 匯出CSV文件
-        function exportToCsv() {
-            if (parsedData.length === 0) {
-                showError('沒有資料可匯出');
-                return;
-            }
-            
-            // 準備CSV內容
-            let csvContent = '年分,月份,縣市別,鄉鎮別,性別,人口數\n';
-            
-            parsedData.forEach(function(item) {
-                csvContent += `${item.year},${item.month},${item.city},${item.district},"${item.gender}",${item.population}\n`;
+                showProgressBar();
+                
+                // 讀取檔案
+                var reader = new FileReader();
+                
+                reader.onprogress = function(e) {
+                    if (e.lengthComputable) {
+                        var percentLoaded = Math.round((e.loaded / e.total) * 100);
+                        updateProgressBar(percentLoaded / 3); // 讀取佔整體進度的三分之一
+                    }
+                };
+                
+                reader.onload = function(e) {
+                    try {
+                        // 開始解析
+                        updateProgressBar(33);
+                        var data = new Uint8Array(e.target.result);
+                        parseExcelFile(data);
+                        
+                        // 完成
+                        updateProgressBar(100);
+                        setTimeout(function() {
+                            hideProgressBar();
+                        }, 500);
+                    } catch (error) {
+                        showError('解析檔案時發生錯誤: ' + error.message);
+                        console.error(error);
+                        hideProgressBar();
+                    }
+                };
+                
+                reader.onerror = function() {
+                    showError('讀取檔案時發生錯誤');
+                    hideProgressBar();
+                };
+                
+                reader.readAsArrayBuffer(file);
             });
             
-            // 建立下載連結
-            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-            const url = URL.createObjectURL(blob);
-            const link = document.createElement('a');
-            link.setAttribute('href', url);
-            link.setAttribute('download', `人口統計_${fileYear}年${fileMonth}月.csv`);
-            link.style.visibility = 'hidden';
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-            
-            showSuccess('CSV檔案已成功匯出');
-        }
-        
-        // 顯示資料庫格式
-        function showDbFormat() {
-            if (parsedData.length === 0) {
-                showError('沒有資料可處理');
-                return;
-            }
-            
-            // 準備資料庫資料
-            prepareDbData();
-            
-            // 填充資料表
-            fillDbTables();
-            
-            // 隱藏結果視圖，顯示資料庫格式視圖
-            resultContainer.style.display = 'none';
-            dbFormatContainer.style.display = 'block';
-        }
-        
-        // 返回資料預覽視圖
-        function showResultView() {
-            dbFormatContainer.style.display = 'none';
-            resultContainer.style.display = 'block';
-        }
-        
-        // 準備資料庫格式資料
-        function prepareDbData() {
-            // 整理縣市資料
-            cityData = [];
-            const cityMap = new Map();
-            
-            parsedData.forEach(function(item) {
-                if (!cityMap.has(item.city)) {
-                    // 簡單的城市代碼生成，實際應用請使用標準代碼
-                    const cityCode = generateCityCode(item.city);
-                    cityMap.set(item.city, cityCode);
+            // 匯出Excel按鈕事件
+            exportXLSXBtn.addEventListener('click', function() {
+                if (parsedData.length === 0) {
+                    showError('沒有資料可匯出');
+                    return;
+                }
+                
+                try {
+                    // 創建新的工作簿
+                    var wb = XLSX.utils.book_new();
                     
-                    cityData.push({
-                        cityCode: cityCode,
-                        cityName: item.city
-                    });
-                }
-            });
-            
-            // 整理鄉鎮資料
-            districtData = [];
-            const districtMap = new Map();
-            
-            parsedData.forEach(function(item) {
-                // 跳過總計行
-                if (item.district === '總計') return;
-                
-                const key = item.city + '-' + item.district;
-                if (!districtMap.has(key)) {
-                    const cityCode = cityMap.get(item.city);
-                    const districtCode = generateDistrictCode(cityCode, item.district);
-                    districtMap.set(key, districtCode);
+                    // 創建工作表數據
+                    var wsData = [['年分', '月份', '縣市別', '鄉鎮別', '性別', '戶數', '人口數']];
                     
-                    districtData.push({
-                        districtCode: districtCode,
-                        cityCode: cityCode,
-                        districtName: item.district
+                    // 添加資料行
+                    parsedData.forEach(function(row) {
+                        wsData.push([
+                            row.year,
+                            row.month,
+                            row.city,
+                            row.district,
+                            row.gender,
+                            row.households,
+                            row.population
+                        ]);
                     });
+                    
+                    // 將數據轉換為工作表
+                    var ws = XLSX.utils.aoa_to_sheet(wsData);
+                    
+                    // 添加工作表到工作簿
+                    XLSX.utils.book_append_sheet(wb, ws, '鄉鎮人口統計');
+                    
+                    // 導出為XLSX文件
+                    XLSX.writeFile(wb, '人口統計_' + fileYear + '年' + fileMonth + '月.xlsx');
+                    showSuccess('已成功匯出Excel檔案');
+                } catch (error) {
+                    showError('匯出Excel時發生錯誤: ' + error.message);
+                    console.error(error);
                 }
             });
-        }
-        
-        // 生成城市代碼
-        function generateCityCode(cityName) {
-            // 在實際應用中，應使用標準的城市代碼
-            // 這裡簡單實現，使用拼音首字母或其他邏輯
-            const codeMap = {
-                '臺北市': 'A',
-                '臺中市': 'B',
-                '基隆市': 'C',
-                '臺南市': 'D',
-                '高雄市': 'E',
-                '新北市': 'F',
-                '宜蘭縣': 'G',
-                '桃園市': 'H',
-                '嘉義市': 'I',
-                '新竹縣': 'J',
-                '苗栗縣': 'K',
-                '南投縣': 'M',
-                '彰化縣': 'N',
-                '新竹市': 'O',
-                '雲林縣': 'P',
-                '嘉義縣': 'Q',
-                '屏東縣': 'T',
-                '花蓮縣': 'U',
-                '臺東縣': 'V',
-                '金門縣': 'W',
-                '澎湖縣': 'X',
-                '連江縣': 'Z'
-            };
             
-            return codeMap[cityName] || cityName.charCodeAt(0).toString(16).toUpperCase();
-        }
-        
-        // 生成鄉鎮代碼
-        function generateDistrictCode(cityCode, districtName) {
-            // 在實際應用中，應使用標準的鄉鎮代碼
-            // 這裡簡單實現，使用城市代碼加序號
-            return cityCode + districtName.slice(0, 2);
-        }
-        
-        // 填充資料庫表格
-        function fillDbTables() {
-            // 清空表格
-            cityBody.innerHTML = '';
-            districtBody.innerHTML = '';
-            populationBody.innerHTML = '';
-            
-            // 填充縣市表格
-            cityData.forEach(function(city) {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${city.cityCode}</td>
-                    <td>${city.cityName}</td>
-                `;
-                cityBody.appendChild(row);
-            });
-            
-            // 填充鄉鎮表格
-            districtData.forEach(function(district) {
-                const row = document.createElement('tr');
-                row.innerHTML = `
-                    <td>${district.districtCode}</td>
-                    <td>${district.cityCode}</td>
-                    <td>${district.districtName}</td>
-                `;
-                districtBody.appendChild(row);
-            });
-            
-            // 填充人口統計表格（僅顯示前20筆）
-            const cityCodeMap = new Map();
-            cityData.forEach(city => cityCodeMap.set(city.cityName, city.cityCode));
-            
-            const districtCodeMap = new Map();
-            districtData.forEach(district => {
-                districtCodeMap.set(district.cityCode + '-' + district.districtName, district.districtCode);
-            });
-            
-            // 只顯示前20筆做預覽
-            const previewPopulation = parsedData.slice(0, 20);
-            
-            previewPopulation.forEach(function(item) {
-                const row = document.createElement('tr');
-                const cityCode = cityCodeMap.get(item.city);
-                let districtCode = null;
+            // 解析Excel函數
+            function parseExcelFile(data) {
+                // 使用SheetJS讀取Excel
+                originalWorkbook = XLSX.read(data, { type: 'array' });
                 
-                if (item.district !== '總計') {
-                    districtCode = districtCodeMap.get(cityCode + '-' + item.district);
-                }
+                // 獲取第一個工作表
+                var firstSheetName = originalWorkbook.SheetNames[0];
+                var worksheet = originalWorkbook.Sheets[firstSheetName];
                 
-                row.innerHTML = `
-                    <td>${item.year}</td>
-                    <td>${item.month}</td>
-                    <td>${cityCode}</td>
-                    <td>${districtCode || 'NULL'}</td>
-                    <td>${item.gender}</td>
-                    <td>${item.population}</td>
-                `;
-                populationBody.appendChild(row);
-            });
-        }
-        
-        // 匯出SQL指令
-        function exportSqlCommands() {
-            if (parsedData.length === 0 || cityData.length === 0) {
-                showError('沒有資料可匯出');
-                return;
+                // 顯示原始Excel預覽
+                displayOriginalPreview(worksheet);
+                
+                // 解除合併儲存格
+                updateProgressBar(66);
+                unmergedWorkbook = unmergeCells(originalWorkbook);
+                var unmergedWorksheet = unmergedWorkbook.Sheets[firstSheetName];
+                
+                // 顯示解除合併後的Excel預覽
+                displayUnmergedPreview(unmergedWorksheet);
+                
+                // 從解除合併儲存格後的工作表提取資料
+                var jsonData = XLSX.utils.sheet_to_json(unmergedWorksheet, { header: 1 });
+                
+                // 提取資料 (根據明確指示)
+                var extractedData = extractDataFromSpecificFormat(jsonData);
+                
+                // 顯示處理後資料
+                displayProcessedData(extractedData);
             }
             
-            // 準備SQL指令
-            let sqlContent = '';
+            // 解除合併儲存格
+            function unmergeCells(workbook) {
+                // 複製原始工作簿，避免修改原始資料
+                var newWorkbook = XLSX.utils.book_new();
+                
+                // 處理每個工作表
+                workbook.SheetNames.forEach(function(sheetName) {
+                    var originalSheet = workbook.Sheets[sheetName];
+                    
+                    // 複製工作表
+                    var newSheet = {};
+                    Object.keys(originalSheet).forEach(function(key) {
+                        if (key !== '!merges') { // 不複製合併資訊
+                            newSheet[key] = originalSheet[key];
+                        }
+                    });
+                    
+                    // 如果有合併儲存格，執行解除合併
+                    if (originalSheet['!merges']) {
+                        originalSheet['!merges'].forEach(function(merge) {
+                            // 獲取左上角儲存格的值
+                            var topLeftCellAddress = XLSX.utils.encode_cell({r: merge.s.r, c: merge.s.c});
+                            var topLeftCellValue = originalSheet[topLeftCellAddress];
+                            
+                            // 複製左上角的值到合併區域的所有儲存格
+                            if (topLeftCellValue) {
+                                for (var r = merge.s.r; r <= merge.e.r; r++) {
+                                    for (var c = merge.s.c; c <= merge.e.c; c++) {
+                                        var cellAddress = XLSX.utils.encode_cell({r: r, c: c});
+                                        // 複製值和樣式，但使用新的儲存格地址
+                                        newSheet[cellAddress] = {
+                                            t: topLeftCellValue.t, // 類型
+                                            v: topLeftCellValue.v, // 值
+                                            // 可以複製其他屬性，如樣式等
+                                        };
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    
+                    // 添加工作表到新工作簿
+                    XLSX.utils.book_append_sheet(newWorkbook, newSheet, sheetName);
+                });
+                
+                return newWorkbook;
+            }
             
-            // 年份資料
-            sqlContent += "-- 年份資料\n";
-            sqlContent += `INSERT INTO Year (Year, ROCYear) VALUES (${parseInt(fileYear) + 1911}, ${fileYear});\n\n`;
+            // 顯示原始Excel預覽
+            function displayOriginalPreview(worksheet) {
+                // 獲取工作表範圍
+                var range = XLSX.utils.decode_range(worksheet['!ref']);
+                
+                // 清空原始表格
+                originalTable.innerHTML = '';
+                
+                // 創建表頭行
+                var headerRow = document.createElement('tr');
+                for (var c = range.s.c; c <= range.e.c; c++) {
+                    var th = document.createElement('th');
+                    th.textContent = XLSX.utils.encode_col(c);
+                    headerRow.appendChild(th);
+                }
+                
+                // 創建表頭元素
+                var thead = document.createElement('thead');
+                thead.appendChild(headerRow);
+                originalTable.appendChild(thead);
+                
+                // 創建表身
+                var tbody = document.createElement('tbody');
+                
+                // 建立一個二維陣列來追蹤已經處理過的合併儲存格
+                var processedCells = Array(range.e.r + 1).fill().map(() => Array(range.e.c + 1).fill(false));
+                
+                // 顯示前20行數據
+                var maxRows = Math.min(range.e.r + 1, 20);
+                for (var r = range.s.r; r < maxRows; r++) {
+                    var tr = document.createElement('tr');
+                    
+                    for (var c = range.s.c; c <= range.e.c; c++) {
+                        // 如果這個儲存格已經被處理過（作為合併儲存格的一部分），則跳過
+                        if (processedCells[r][c]) {
+                            continue;
+                        }
+                        
+                        var td = document.createElement('td');
+                        var cellAddress = XLSX.utils.encode_cell({r: r, c: c});
+                        var cell = worksheet[cellAddress];
+                        
+                        // 檢查是否為合併儲存格的一部分
+                        var mergeInfo = null;
+                        if (worksheet['!merges']) {
+                            for (var i = 0; i < worksheet['!merges'].length; i++) {
+                                var merge = worksheet['!merges'][i];
+                                if (r >= merge.s.r && r <= merge.e.r && 
+                                    c >= merge.s.c && c <= merge.e.c) {
+                                    mergeInfo = merge;
+                                    break;
+                                }
+                            }
+                        }
+                        
+                        // 如果是合併儲存格的一部分
+                        if (mergeInfo) {
+                            // 只處理合併儲存格的左上角
+                            if (r === mergeInfo.s.r && c === mergeInfo.s.c) {
+                                // 設置 colspan 和 rowspan
+                                td.colSpan = mergeInfo.e.c - mergeInfo.s.c + 1;
+                                td.rowSpan = mergeInfo.e.r - mergeInfo.s.r + 1;
+                                
+                                // 顯示左上角儲存格的值
+                                if (cell) {
+                                    td.textContent = cell.v;
+                                }
+                                
+                                // 標記所有被這個合併儲存格覆蓋的儲存格為已處理
+                                for (var mr = mergeInfo.s.r; mr <= mergeInfo.e.r; mr++) {
+                                    for (var mc = mergeInfo.s.c; mc <= mergeInfo.e.c; mc++) {
+                                        processedCells[mr][mc] = true;
+                                    }
+                                }
+                                
+                                tr.appendChild(td);
+                            }
+                            // 其他部分的合併儲存格已經被標記為已處理，會被跳過
+                        } else {
+                            // 不是合併儲存格的一部分，直接顯示
+                            if (cell) {
+                                td.textContent = cell.v;
+                            }
+                            tr.appendChild(td);
+                        }
+                    }
+                    
+                    // 只有當行中有內容時才添加到表格
+                    if (tr.children.length > 0) {
+                        tbody.appendChild(tr);
+                    }
+                }
+                
+                originalTable.appendChild(tbody);
+                
+                // 如果有更多行，添加提示信息
+                if (range.e.r + 1 > 20) {
+                    var infoRow = document.createElement('tr');
+                    var infoCell = document.createElement('td');
+                    infoCell.colSpan = range.e.c + 1;
+                    infoCell.style.textAlign = 'center';
+                    infoCell.style.fontStyle = 'italic';
+                    infoCell.textContent = '... 僅顯示前 20 行 (共 ' + (range.e.r + 1) + ' 行)';
+                    infoRow.appendChild(infoCell);
+                    tbody.appendChild(infoRow);
+                }
+            }
             
-            // 月份資料
-            sqlContent += "-- 月份資料\n";
-            sqlContent += `INSERT INTO Month (Month, MonthName) VALUES (${fileMonth}, '${getMonthName(fileMonth)}');\n\n`;
+            // 顯示解除合併後的Excel預覽
+            function displayUnmergedPreview(worksheet) {
+                // 獲取工作表範圍
+                var range = XLSX.utils.decode_range(worksheet['!ref']);
+                
+                // 清空解除合併表格
+                unmergedTable.innerHTML = '';
+                
+                // 創建表頭行
+                var headerRow = document.createElement('tr');
+                for (var c = range.s.c; c <= range.e.c; c++) {
+                    var th = document.createElement('th');
+                    th.textContent = XLSX.utils.encode_col(c);
+                    headerRow.appendChild(th);
+                }
+                
+                // 創建表頭元素
+                var thead = document.createElement('thead');
+                thead.appendChild(headerRow);
+                unmergedTable.appendChild(thead);
+                
+                // 創建表身
+                var tbody = document.createElement('tbody');
+                
+                // 顯示前20行數據
+                var maxRows = Math.min(range.e.r + 1, 20);
+                for (var r = range.s.r; r < maxRows; r++) {
+                    var tr = document.createElement('tr');
+                    
+                    for (var c = range.s.c; c <= range.e.c; c++) {
+                        var td = document.createElement('td');
+                        var cellAddress = XLSX.utils.encode_cell({r: r, c: c});
+                        var cell = worksheet[cellAddress];
+                        
+                        if (cell) {
+                            td.textContent = cell.v;
+                        }
+                        
+                        tr.appendChild(td);
+                    }
+                    
+                    tbody.appendChild(tr);
+                }
+                
+                unmergedTable.appendChild(tbody);
+                
+                // 如果有更多行，添加提示信息
+                if (range.e.r + 1 > 20) {
+                    var infoRow = document.createElement('tr');
+                    var infoCell = document.createElement('td');
+                    infoCell.colSpan = range.e.c + 1;
+                    infoCell.style.textAlign = 'center';
+                    infoCell.style.fontStyle = 'italic';
+                    infoCell.textContent = '... 僅顯示前 20 行 (共 ' + (range.e.r + 1) + ' 行)';
+                    infoRow.appendChild(infoCell);
+                    tbody.appendChild(infoRow);
+                }
+            }
             
-            // 縣市資料
-            sqlContent += "-- 縣市資料\n";
-            cityData.forEach(function(city) {
-                sqlContent += `INSERT INTO City (CityCode, CityName) VALUES ('${city.cityCode}', '${city.cityName}');\n`;
-            });
-            sqlContent += "\n";
+            // 根據特定格式提取資料
+            function extractDataFromSpecificFormat(jsonData) {
+                var result = [];
+                
+                try {
+                    // 尋找標題行中包含「中華民國」的行以確定資料開始的位置
+                    var titleRowIndex = -1;
+                    for (var i = 0; i < Math.min(5, jsonData.length); i++) {
+                        var row = jsonData[i];
+                        if (row && row[0] && String(row[0]).includes('中華民國')) {
+                            titleRowIndex = i;
+                            
+                            // 嘗試從標題中提取年月
+                            if (!fileYear || !fileMonth) {
+                                var titleText = String(row[0]);
+                                var yearMonthMatch = titleText.match(/(\d+)年(\d+)月/);
+                                if (yearMonthMatch) {
+                                    fileYear = yearMonthMatch[1];
+                                    fileMonth = yearMonthMatch[2];
+                                }
+                            }
+                            break;
+                        }
+                    }
+                    
+                    // 如果沒找到標題行，就假設資料從第一行開始
+                    if (titleRowIndex === -1) {
+                        titleRowIndex = 0;
+                    }
+                    
+                    // 定位到縣市資料開始的行
+                    // 尋找縣市資料（通常含「臺北市」的行）
+                    var cityRowIndex = -1;
+                    var cityName = '';
+                    
+                    for (var i = 0; i < jsonData.length; i++) {
+                        var row = jsonData[i];
+                        if (row && row[0] && 
+                            (String(row[0]).includes('臺北市') || 
+                             String(row[0]).includes('台北市') || 
+                             String(row[0]).includes('新北市') || 
+                             String(row[0]).includes('臺中市') || 
+                             String(row[0]).includes('高雄市'))) {
+                            cityRowIndex = i;
+                            cityName = String(row[0]);
+                            break;
+                        }
+                    }
+                    
+                    if (cityRowIndex === -1) {
+                        throw new Error('無法找到縣市資料行');
+                    }
+                    
+                    console.log('縣市行:', cityRowIndex);
+                    console.log('縣市名稱:', cityName);
+                    console.log('該行數據:', jsonData[cityRowIndex]);
+                    
+                    // 處理縣市總計行
+                    var cityRow = jsonData[cityRowIndex];
+                    if (cityRow[1] !== undefined && cityRow[3] !== undefined && cityRow[4] !== undefined) {
+                        // 男性資料
+                        result.push({
+                            year: fileYear,
+                            month: fileMonth,
+                            city: cityName,
+                            district: '總計',
+                            gender: '男',
+                            households: cityRow[1], // 戶數
+                            population: cityRow[3]  // 男性人口數
+                        });
+                        
+                        // 女性資料
+                        result.push({
+                            year: fileYear,
+                            month: fileMonth,
+                            city: cityName,
+                            district: '總計',
+                            gender: '女',
+                            households: cityRow[1], // 戶數
+                            population: cityRow[4]  // 女性人口數
+                        });
+                    }
+                    
+                    // 從縣市行之後開始處理鄉鎮資料
+                    for (var i = cityRowIndex + 1; i < jsonData.length; i++) {
+                        var row = jsonData[i];
+                        
+                        // 確保行有效且有資料
+                        if (!row || !row[0]) continue;
+                        
+                        var districtName = String(row[0]);
+                        
+                        // 跳過空行或非鄉鎮名的行 (排除空白和不包含區/鄉/鎮的名稱)
+                        if (!districtName || districtName.trim() === '' || 
+                            !(districtName.includes('區') || districtName.includes('鄉') || 
+                              districtName.includes('鎮') || districtName.includes('市'))) continue;
+                              
+                        // 檢查是否已經到了下一個縣市（如果有）
+                        if (districtName.includes('縣') || 
+                            (districtName.includes('市') && districtName.length <= 3)) {
+                            break;
+                        }
+                        
+                        console.log('處理鄉鎮:', districtName, '行數據:', row);
+                        
+                        // 確保有人口數資料
+                        if (row[1] === undefined || row[3] === undefined || row[4] === undefined) continue;
+                        
+                        // 男性資料
+                        result.push({
+                            year: fileYear,
+                            month: fileMonth,
+                            city: cityName,
+                            district: districtName,
+                            gender: '男',
+                            households: row[1], // 戶數
+                            population: row[3]  // 男性人口數
+                        });
+                        
+                        // 女性資料
+                        result.push({
+                            year: fileYear,
+                            month: fileMonth,
+                            city: cityName,
+                            district: districtName,
+                            gender: '女',
+                            households: row[1], // 戶數
+                            population: row[4]  // 女性人口數
+                        });
+                    }
+                    
+                    if (result.length === 0) {
+                        throw new Error('未能提取到任何有效資料');
+                    }
+                    
+                    showSuccess('成功解析資料，共 ' + result.length + ' 筆記錄');
+                    } catch (error) {
+                    showError('資料解析錯誤: ' + error.message);
+                    console.error('提取資料錯誤:', error);
+                }
+                
+                return result;
+            }
             
-            // 鄉鎮資料
-            sqlContent += "-- 鄉鎮資料\n";
-            districtData.forEach(function(district) {
-                sqlContent += `INSERT INTO District (DistrictCode, CityCode, DistrictName) VALUES ('${district.districtCode}', '${district.cityCode}', '${district.districtName}');\n`;
-            });
-            sqlContent += "\n";
+            // 顯示處理後資料
+            function displayProcessedData(data) {
+                parsedData = data;
+                
+                // 清空表格
+                processedBody.innerHTML = '';
+                
+                // 更新摘要
+                resultSummary.textContent = '共解析出 ' + data.length + ' 筆記錄';
+                
+                // 只顯示前 100 筆資料，避免瀏覽器變慢
+                var displayData = data.slice(0, 100);
+                
+                // 添加資料到表格
+                for (var i = 0; i < displayData.length; i++) {
+                    var item = displayData[i];
+                    var row = document.createElement('tr');
+                    
+                    var yearCell = document.createElement('td');
+                    yearCell.textContent = item.year;
+                    
+                    var monthCell = document.createElement('td');
+                    monthCell.textContent = item.month;
+                    
+                    var cityCell = document.createElement('td');
+                    cityCell.textContent = item.city;
+                    
+                    var districtCell = document.createElement('td');
+                    districtCell.textContent = item.district;
+                    
+                    var genderCell = document.createElement('td');
+                    genderCell.textContent = item.gender;
+                    
+                    var householdsCell = document.createElement('td');
+                    householdsCell.textContent = item.households;
+                    
+                    var populationCell = document.createElement('td');
+                    populationCell.textContent = item.population;
+                    
+                    row.appendChild(yearCell);
+                    row.appendChild(monthCell);
+                    row.appendChild(cityCell);
+                    row.appendChild(districtCell);
+                    row.appendChild(genderCell);
+                    row.appendChild(householdsCell);
+                    row.appendChild(populationCell);
+                    
+                    processedBody.appendChild(row);
+                }
+                
+                // 顯示結果區段
+                resultSection.style.display = 'block';
+                
+                // 如果有 100 筆以上記錄，添加注意文字
+                if (data.length > 100) {
+                    resultSummary.textContent += ' (只顯示前 100 筆)';
+                }
+            }
             
-            // 人口統計資料（僅顯示前20筆做預覽）
-            sqlContent += "-- 人口統計資料 (僅顯示前20筆示例)\n";
+            // 顯示錯誤訊息
+            function showError(message) {
+                errorMessage.textContent = message;
+                errorMessage.style.display = 'block';
+            }
             
-            const cityCodeMap = new Map();
-            cityData.forEach(city => cityCodeMap.set(city.cityName, city.cityCode));
+            // 隱藏錯誤訊息
+            function hideError() {
+                errorMessage.style.display = 'none';
+            }
             
-            const districtCodeMap = new Map();
-            districtData.forEach(district => {
-                district
+            // 顯示成功訊息
+            function showSuccess(message) {
+                successMessage.textContent = message;
+                successMessage.style.display = 'block';
+            }
+            
+            // 隱藏成功訊息
+            function hideSuccess() {
+                successMessage.style.display = 'none';
+            }
+            
+            // 顯示進度條
+            function showProgressBar() {
+                progressContainer.style.display = 'block';
+                updateProgressBar(0);
+            }
+            
+            // 隱藏進度條
+            function hideProgressBar() {
+                progressContainer.style.display = 'none';
+            }
+            
+            // 更新進度條
+            function updateProgressBar(percent) {
+                progressBar.style.width = percent + '%';
+            }
+        });
+    </script>
+</body>
+</html>
