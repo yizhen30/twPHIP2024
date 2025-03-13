@@ -7,7 +7,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>鄉鎮人口統計Excel解析器</title>
+    <title>鄉鎮人口統計資料解析器</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         body {
@@ -145,11 +145,11 @@
 </head>
 <body>
     <div class="container">
-        <h1>鄉鎮人口統計Excel解析器</h1>
+        <h1>鄉鎮人口統計資料解析器</h1>
         
         <div class="upload-section">
-            <h2>1. 選擇Excel檔案</h2>
-            <input type="file" id="excelFile" accept=".xls,.xlsx" />
+            <h2>1. 選擇檔案</h2>
+            <input type="file" id="excelFile" accept=".xls,.xlsx,.csv" />
             <button id="parseBtn">解析檔案</button>
             <div id="fileInfo"></div>
             <div class="progress-container" id="progressContainer">
@@ -217,6 +217,16 @@
 
     <script>
         document.addEventListener('DOMContentLoaded', function() {
+            // 引入 Papa Parse 庫 (用於解析 CSV)
+            var papaParseScript = document.createElement('script');
+            papaParseScript.src = 'https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.3.2/papaparse.min.js';
+            document.head.appendChild(papaParseScript);
+            
+            // 移除字串中的特殊符號「※」
+            function removeSpecialSymbol(str) {
+                if (typeof str !== 'string') return str;
+                return str.replace(/※/g, '');
+            }
             // DOM 元素
             var excelFileInput = document.getElementById('excelFile');
             var parseBtn = document.getElementById('parseBtn');
@@ -278,7 +288,7 @@
             parseBtn.addEventListener('click', function() {
                 var file = excelFileInput.files[0];
                 if (!file) {
-                    showError('請先選擇Excel檔案');
+                    showError('請先選擇檔案');
                     return;
                 }
                 
@@ -297,6 +307,9 @@
                 hideSuccess();
                 showProgressBar();
                 
+                // 檢查檔案類型
+                var fileType = file.name.split('.').pop().toLowerCase();
+                
                 // 讀取檔案
                 var reader = new FileReader();
                 
@@ -311,8 +324,16 @@
                     try {
                         // 開始解析
                         updateProgressBar(33);
-                        var data = new Uint8Array(e.target.result);
-                        parseExcelFile(data);
+                        
+                        if (fileType === 'csv') {
+                            // 解析 CSV 檔案
+                            var csvContent = e.target.result;
+                            parseCSVFile(csvContent);
+                        } else {
+                            // 解析 Excel 檔案
+                            var data = new Uint8Array(e.target.result);
+                            parseExcelFile(data);
+                        }
                         
                         // 完成
                         updateProgressBar(100);
@@ -331,7 +352,11 @@
                     hideProgressBar();
                 };
                 
-                reader.readAsArrayBuffer(file);
+                if (fileType === 'csv') {
+                    reader.readAsText(file); // 使用 readAsText 讀取 CSV 檔案
+                } else {
+                    reader.readAsArrayBuffer(file); // 使用 readAsArrayBuffer 讀取 Excel 檔案
+                }
             });
             
             // 匯出Excel按鈕事件
@@ -481,9 +506,8 @@
                 // 建立一個二維陣列來追蹤已經處理過的合併儲存格
                 var processedCells = Array(range.e.r + 1).fill().map(() => Array(range.e.c + 1).fill(false));
                 
-                // 顯示前20行數據
-                var maxRows = Math.min(range.e.r + 1, 20);
-                for (var r = range.s.r; r < maxRows; r++) {
+                // 顯示所有行數據，不限制行數
+                for (var r = range.s.r; r <= range.e.r; r++) {
                     var tr = document.createElement('tr');
                     
                     for (var c = range.s.c; c <= range.e.c; c++) {
@@ -548,18 +572,6 @@
                 }
                 
                 originalTable.appendChild(tbody);
-                
-                // 如果有更多行，添加提示信息
-                if (range.e.r + 1 > 20) {
-                    var infoRow = document.createElement('tr');
-                    var infoCell = document.createElement('td');
-                    infoCell.colSpan = range.e.c + 1;
-                    infoCell.style.textAlign = 'center';
-                    infoCell.style.fontStyle = 'italic';
-                    infoCell.textContent = '... 僅顯示前 20 行 (共 ' + (range.e.r + 1) + ' 行)';
-                    infoRow.appendChild(infoCell);
-                    tbody.appendChild(infoRow);
-                }
             }
             
             // 顯示解除合併後的Excel預覽
@@ -586,9 +598,8 @@
                 // 創建表身
                 var tbody = document.createElement('tbody');
                 
-                // 顯示前20行數據
-                var maxRows = Math.min(range.e.r + 1, 20);
-                for (var r = range.s.r; r < maxRows; r++) {
+                // 顯示所有行數據，不限制行數
+                for (var r = range.s.r; r <= range.e.r; r++) {
                     var tr = document.createElement('tr');
                     
                     for (var c = range.s.c; c <= range.e.c; c++) {
@@ -607,18 +618,6 @@
                 }
                 
                 unmergedTable.appendChild(tbody);
-                
-                // 如果有更多行，添加提示信息
-                if (range.e.r + 1 > 20) {
-                    var infoRow = document.createElement('tr');
-                    var infoCell = document.createElement('td');
-                    infoCell.colSpan = range.e.c + 1;
-                    infoCell.style.textAlign = 'center';
-                    infoCell.style.fontStyle = 'italic';
-                    infoCell.textContent = '... 僅顯示前 20 行 (共 ' + (range.e.r + 1) + ' 行)';
-                    infoRow.appendChild(infoCell);
-                    tbody.appendChild(infoRow);
-                }
             }
             
             // 根據特定格式提取資料
@@ -681,11 +680,14 @@
                     // 處理縣市總計行
                     var cityRow = jsonData[cityRowIndex];
                     if (cityRow[1] !== undefined && cityRow[3] !== undefined && cityRow[4] !== undefined) {
+                        // 移除特殊符號「※」
+                        var cleanCityName = removeSpecialSymbol(cityName);
+                        
                         // 男性資料
                         result.push({
                             year: fileYear,
                             month: fileMonth,
-                            city: cityName,
+                            city: cleanCityName,
                             district: '總計',
                             gender: '男',
                             households: cityRow[1], // 戶數
@@ -696,7 +698,7 @@
                         result.push({
                             year: fileYear,
                             month: fileMonth,
-                            city: cityName,
+                            city: cleanCityName,
                             district: '總計',
                             gender: '女',
                             households: cityRow[1], // 戶數
@@ -729,12 +731,16 @@
                         // 確保有人口數資料
                         if (row[1] === undefined || row[3] === undefined || row[4] === undefined) continue;
                         
+                        // 移除特殊符號「※」
+                        var cleanDistrictName = removeSpecialSymbol(districtName);
+                        var cleanCityName = removeSpecialSymbol(cityName);
+                        
                         // 男性資料
                         result.push({
                             year: fileYear,
                             month: fileMonth,
-                            city: cityName,
-                            district: districtName,
+                            city: cleanCityName,
+                            district: cleanDistrictName,
                             gender: '男',
                             households: row[1], // 戶數
                             population: row[3]  // 男性人口數
@@ -744,8 +750,8 @@
                         result.push({
                             year: fileYear,
                             month: fileMonth,
-                            city: cityName,
-                            district: districtName,
+                            city: cleanCityName,
+                            district: cleanDistrictName,
                             gender: '女',
                             households: row[1], // 戶數
                             population: row[4]  // 女性人口數
@@ -766,6 +772,132 @@
             }
             
             // 顯示處理後資料
+            // 解析 CSV 檔案
+            function parseCSVFile(csvContent) {
+                // 使用 Papa Parse 解析 CSV
+                Papa.parse(csvContent, {
+                    header: false, // 假設沒有標題列
+                    dynamicTyping: true, // 自動轉換數字
+                    skipEmptyLines: true,
+                    complete: function(results) {
+                        // 獲取解析後的資料
+                        var jsonData = results.data;
+                        
+                        // 從解析後的 CSV 中顯示原始預覽
+                        displayCSVOriginalPreview(jsonData);
+                        
+                        // 從解析後的 CSV 中顯示解除合併後的預覽 (對於 CSV，與原始預覽相同)
+                        displayCSVUnmergedPreview(jsonData);
+                        
+                        // 提取資料
+                        var extractedData = extractDataFromSpecificFormat(jsonData);
+                        
+                        // 顯示處理後資料
+                        displayProcessedData(extractedData);
+                    },
+                    error: function(error) {
+                        showError('解析 CSV 時發生錯誤: ' + error.message);
+                    }
+                });
+            }
+            
+            // 顯示 CSV 原始預覽
+            function displayCSVOriginalPreview(data) {
+                // 清空原始表格
+                originalTable.innerHTML = '';
+                
+                // 建立表頭
+                var thead = document.createElement('thead');
+                var headerRow = document.createElement('tr');
+                
+                // 獲取最大列數
+                var maxColumns = 0;
+                for (var i = 0; i < data.length; i++) {
+                    if (data[i].length > maxColumns) {
+                        maxColumns = data[i].length;
+                    }
+                }
+                
+                // 建立表頭標籤 (A, B, C, ...)
+                for (var i = 0; i < maxColumns; i++) {
+                    var th = document.createElement('th');
+                    th.textContent = String.fromCharCode(65 + i); // ASCII A-Z
+                    headerRow.appendChild(th);
+                }
+                
+                thead.appendChild(headerRow);
+                originalTable.appendChild(thead);
+                
+                // 建立表身
+                var tbody = document.createElement('tbody');
+                
+                // 顯示所有行資料
+                for (var i = 0; i < data.length; i++) {
+                    var tr = document.createElement('tr');
+                    
+                    for (var j = 0; j < maxColumns; j++) {
+                        var td = document.createElement('td');
+                        if (j < data[i].length && data[i][j] !== null) {
+                            td.textContent = data[i][j];
+                        }
+                        tr.appendChild(td);
+                    }
+                    
+                    tbody.appendChild(tr);
+                }
+                
+                originalTable.appendChild(tbody);
+            }
+            
+            // 顯示 CSV 解除合併預覽 (與原始預覽相同，CSV 本身沒有合併儲存格)
+            function displayCSVUnmergedPreview(data) {
+                // 清空解除合併表格
+                unmergedTable.innerHTML = '';
+                
+                // 建立表頭
+                var thead = document.createElement('thead');
+                var headerRow = document.createElement('tr');
+                
+                // 獲取最大列數
+                var maxColumns = 0;
+                for (var i = 0; i < data.length; i++) {
+                    if (data[i].length > maxColumns) {
+                        maxColumns = data[i].length;
+                    }
+                }
+                
+                // 建立表頭標籤 (A, B, C, ...)
+                for (var i = 0; i < maxColumns; i++) {
+                    var th = document.createElement('th');
+                    th.textContent = String.fromCharCode(65 + i); // ASCII A-Z
+                    headerRow.appendChild(th);
+                }
+                
+                thead.appendChild(headerRow);
+                unmergedTable.appendChild(thead);
+                
+                // 建立表身
+                var tbody = document.createElement('tbody');
+                
+                // 顯示所有行資料
+                for (var i = 0; i < data.length; i++) {
+                    var tr = document.createElement('tr');
+                    
+                    for (var j = 0; j < maxColumns; j++) {
+                        var td = document.createElement('td');
+                        if (j < data[i].length && data[i][j] !== null) {
+                            td.textContent = data[i][j];
+                        }
+                        tr.appendChild(td);
+                    }
+                    
+                    tbody.appendChild(tr);
+                }
+                
+                unmergedTable.appendChild(tbody);
+            }
+            
+            // 顯示處理後資料
             function displayProcessedData(data) {
                 parsedData = data;
                 
@@ -775,12 +907,9 @@
                 // 更新摘要
                 resultSummary.textContent = '共解析出 ' + data.length + ' 筆記錄';
                 
-                // 只顯示前 100 筆資料，避免瀏覽器變慢
-                var displayData = data.slice(0, 100);
-                
-                // 添加資料到表格
-                for (var i = 0; i < displayData.length; i++) {
-                    var item = displayData[i];
+                // 添加所有資料到表格，不再限制為前100筆
+                for (var i = 0; i < data.length; i++) {
+                    var item = data[i];
                     var row = document.createElement('tr');
                     
                     var yearCell = document.createElement('td');
@@ -817,11 +946,6 @@
                 
                 // 顯示結果區段
                 resultSection.style.display = 'block';
-                
-                // 如果有 100 筆以上記錄，添加注意文字
-                if (data.length > 100) {
-                    resultSummary.textContent += ' (只顯示前 100 筆)';
-                }
             }
             
             // 顯示錯誤訊息
@@ -853,6 +977,11 @@
             }
             
             // 隱藏進度條
+            function hideProgressBar() {
+                progressContainer.style.display = 'none';
+            }
+            
+            // 移除進度條
             function hideProgressBar() {
                 progressContainer.style.display = 'none';
             }
