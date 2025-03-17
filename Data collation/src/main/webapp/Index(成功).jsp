@@ -620,14 +620,14 @@
                 unmergedTable.appendChild(tbody);
             }
             
-            // 根據特定格式提取資料
+         	// 根據特定格式提取資料 - 修改版
             function extractDataFromSpecificFormat(jsonData) {
                 var result = [];
                 
                 try {
                     // 尋找標題行中包含「中華民國」的行以確定資料開始的位置
                     var titleRowIndex = -1;
-                    for (var i = 0; i < Math.min(5, jsonData.length); i++) {
+                    for (var i = 0; i < Math.min(10, jsonData.length); i++) {
                         var row = jsonData[i];
                         if (row && row[0] && String(row[0]).includes('中華民國')) {
                             titleRowIndex = i;
@@ -650,112 +650,130 @@
                         titleRowIndex = 0;
                     }
                     
-                    // 定位到縣市資料開始的行
-                    // 尋找縣市資料（通常含「臺北市」的行）
-                    var cityRowIndex = -1;
-                    var cityName = '';
-                    
-                    for (var i = 0; i < jsonData.length; i++) {
+                    // 尋找包含「區域別」、「戶數」、「人口數」等欄位的標題列
+                    var headerRowIndex = -1;
+                    for (var i = titleRowIndex; i < Math.min(titleRowIndex + 15, jsonData.length); i++) {
                         var row = jsonData[i];
-                        if (row && row[0] && 
-                            (String(row[0]).includes('臺北市') || 
-                             String(row[0]).includes('台北市') || 
-                             String(row[0]).includes('新北市') || 
-                             String(row[0]).includes('臺中市') || 
-                             String(row[0]).includes('高雄市'))) {
-                            cityRowIndex = i;
-                            cityName = String(row[0]);
+                        if (row && 
+                            ((row[0] && String(row[0]).includes('區域別') || String(row[0]).includes('區 域 別')) ||
+                             (row.some(cell => cell && String(cell).includes('區域別') || String(cell).includes('區 域 別'))))) {
+                            headerRowIndex = i;
                             break;
                         }
                     }
                     
-                    if (cityRowIndex === -1) {
-                        throw new Error('無法找到縣市資料行');
+                    if (headerRowIndex === -1) {
+                        console.log('找不到標題列，嘗試繼續處理...');
+                    } else {
+                        console.log('找到標題列:', headerRowIndex);
                     }
                     
-                    console.log('縣市行:', cityRowIndex);
-                    console.log('縣市名稱:', cityName);
-                    console.log('該行數據:', jsonData[cityRowIndex]);
+                    // 尋找縣市資料開始的位置
+                    var dataStartIndex = headerRowIndex !== -1 ? headerRowIndex + 1 : titleRowIndex + 5;
                     
-                    // 處理縣市總計行
-                    var cityRow = jsonData[cityRowIndex];
-                    if (cityRow[1] !== undefined && cityRow[3] !== undefined && cityRow[4] !== undefined) {
-                        // 移除特殊符號「※」
-                        var cleanCityName = removeSpecialSymbol(cityName);
-                        
-                        // 男性資料
-                        result.push({
-                            year: fileYear,
-                            month: fileMonth,
-                            city: cleanCityName,
-                            district: '總計',
-                            gender: '男',
-                            households: cityRow[1], // 戶數
-                            population: cityRow[3]  // 男性人口數
-                        });
-                        
-                        // 女性資料
-                        result.push({
-                            year: fileYear,
-                            month: fileMonth,
-                            city: cleanCityName,
-                            district: '總計',
-                            gender: '女',
-                            households: cityRow[1], // 戶數
-                            population: cityRow[4]  // 女性人口數
-                        });
-                    }
+                    // 設定判斷縣市的正則表達式
+                    var cityRegex = /(新北市|臺北市|台北市|桃園市|臺中市|台中市|臺南市|台南市|高雄市|宜蘭縣|新竹縣|苗栗縣|彰化縣|南投縣|雲林縣|嘉義縣|屏東縣|臺東縣|台東縣|花蓮縣|澎湖縣|基隆市|新竹市|嘉義市|金門縣|連江縣)/;
                     
-                    // 從縣市行之後開始處理鄉鎮資料
-                    for (var i = cityRowIndex + 1; i < jsonData.length; i++) {
+                    // 記錄目前處理中的縣市和鄉鎮
+                    var currentCityName = '';
+                    var isProcessingCity = false;
+                    
+                    console.log('開始從第 ' + dataStartIndex + ' 行解析資料');
+                    
+                    // 從資料開始位置逐行處理
+                    for (var i = dataStartIndex; i < jsonData.length; i++) {
                         var row = jsonData[i];
                         
-                        // 確保行有效且有資料
-                        if (!row || !row[0]) continue;
+                        // 跳過空行
+                        if (!row || !row[0] || String(row[0]).trim() === '') continue;
                         
-                        var districtName = String(row[0]);
+                        var cellValue = String(row[0]).trim();
                         
-                        // 跳過空行或非鄉鎮名的行 (排除空白和不包含區/鄉/鎮的名稱)
-                        if (!districtName || districtName.trim() === '' || 
-                            !(districtName.includes('區') || districtName.includes('鄉') || 
-                              districtName.includes('鎮') || districtName.includes('市'))) continue;
-                              
-                        // 檢查是否已經到了下一個縣市（如果有）
-                        if (districtName.includes('縣') || 
-                            (districtName.includes('市') && districtName.length <= 3)) {
-                            break;
+                        // 檢查是否為縣市名稱
+                        var cityMatch = cityRegex.exec(cellValue);
+                        if (cityMatch && cellValue.length <= 5) {  // 縣市名稱通常不超過5個字
+                            currentCityName = removeSpecialSymbol(cellValue);
+                            isProcessingCity = true;
+                            console.log('找到縣市:', currentCityName);
+                            
+                            // 只有當有足夠的欄位數據時才處理
+                            if (row.length >= 5 && row[1] !== undefined && row[2] !== undefined && row[3] !== undefined && row[4] !== undefined) {
+                                // 處理縣市總計資料
+                                // 男性資料
+                                result.push({
+                                    year: fileYear,
+                                    month: fileMonth,
+                                    city: currentCityName,
+                                    district: '總計',
+                                    gender: '男',
+                                    households: row[1], // 戶數
+                                    population: row[3]  // 男性人口數
+                                });
+                                
+                                // 女性資料
+                                result.push({
+                                    year: fileYear,
+                                    month: fileMonth,
+                                    city: currentCityName,
+                                    district: '總計',
+                                    gender: '女',
+                                    households: row[1], // 戶數
+                                    population: row[4]  // 女性人口數
+                                });
+                            }
+                            continue;
                         }
                         
-                        console.log('處理鄉鎮:', districtName, '行數據:', row);
+                        // 如果還沒有找到任何縣市，跳過處理
+                        if (!currentCityName) continue;
                         
-                        // 確保有人口數資料
-                        if (row[1] === undefined || row[3] === undefined || row[4] === undefined) continue;
+                        // 檢查是否為鄉鎮市區名稱
+                        var isDistrict = (cellValue.includes('區') || cellValue.includes('鄉') || 
+                                         cellValue.includes('鎮') || (cellValue.includes('市') && cellValue !== currentCityName)) &&
+                                         !cellValue.includes('小計') && !cellValue.includes('總計');
                         
-                        // 移除特殊符號「※」
-                        var cleanDistrictName = removeSpecialSymbol(districtName);
-                        var cleanCityName = removeSpecialSymbol(cityName);
+                        if (isDistrict && row.length >= 5) {
+                            var districtName = removeSpecialSymbol(cellValue);
+                            
+                            // 確保有人口數資料
+                            if (row[1] === undefined || row[3] === undefined || row[4] === undefined) {
+                                console.log('跳過無完整資料的鄉鎮:', districtName);
+                                continue;
+                            }
+                            
+                            console.log('處理鄉鎮:', districtName, '行數據:', row);
+                            
+                            // 男性資料
+                            result.push({
+                                year: fileYear,
+                                month: fileMonth,
+                                city: currentCityName,
+                                district: districtName,
+                                gender: '男',
+                                households: row[1], // 戶數
+                                population: row[3]  // 男性人口數
+                            });
+                            
+                            // 女性資料
+                            result.push({
+                                year: fileYear,
+                                month: fileMonth,
+                                city: currentCityName,
+                                district: districtName,
+                                gender: '女',
+                                households: row[1], // 戶數
+                                population: row[4]  // 女性人口數
+                            });
+                        }
                         
-                        // 男性資料
-                        result.push({
-                            year: fileYear,
-                            month: fileMonth,
-                            city: cleanCityName,
-                            district: cleanDistrictName,
-                            gender: '男',
-                            households: row[1], // 戶數
-                            population: row[3]  // 男性人口數
-                        });
-                        
-                        // 女性資料
-                        result.push({
-                            year: fileYear,
-                            month: fileMonth,
-                            city: cleanCityName,
-                            district: cleanDistrictName,
-                            gender: '女',
-                            households: row[1], // 戶數
-                            population: row[4]  // 女性人口數
-                        });
+                        // 檢查是否已經開始處理下一個縣市
+                        if (isProcessingCity) {
+                            var nextCityMatch = cityRegex.exec(cellValue);
+                            if (nextCityMatch && cellValue !== currentCityName && cellValue.length <= 5) {
+                                console.log('完成處理縣市:', currentCityName, '，準備處理下一個縣市');
+                                isProcessingCity = false;
+                            }
+                        }
                     }
                     
                     if (result.length === 0) {
@@ -763,7 +781,8 @@
                     }
                     
                     showSuccess('成功解析資料，共 ' + result.length + ' 筆記錄');
-                    } catch (error) {
+                    
+                } catch (error) {
                     showError('資料解析錯誤: ' + error.message);
                     console.error('提取資料錯誤:', error);
                 }
