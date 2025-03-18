@@ -1,6 +1,11 @@
 eclipse.preferences.version=1
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 encoding//src/main/webapp/Index_\u6A94\u6848\u9810\u89BD.jsp=UTF-8
+=======
+encoding//src/main/webapp/process.jsp=UTF-8
+encoding//src/main/webapp/upload.jsp=UTF-8
+>>>>>>> Stashed changes
 =======
 encoding//src/main/webapp/process.jsp=UTF-8
 encoding//src/main/webapp/upload.jsp=UTF-8
