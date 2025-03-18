@@ -733,6 +733,48 @@
             unmergedTable.appendChild(tbody);
         }
         
+        // 判斷是否為備註或說明行的函數
+        function isNoteOrDescription(row) {
+            // 檢查是否為空行
+            if (!row || row.length === 0) return false;
+            
+            // 檢查第一格是否包含常見的備註標記
+            var firstCell = row[0];
+            if (firstCell === null || firstCell === undefined) return false;
+            
+            // 轉換為字串以進行檢查
+            if (typeof firstCell !== 'string') {
+                firstCell = String(firstCell);
+            }
+            
+            // 檢查是否為備註或說明行
+            if (firstCell.includes('備註') || 
+                firstCell.includes('說明') || 
+                firstCell.includes('註') || 
+                firstCell.includes('附註') || 
+                firstCell.includes('注意') || 
+                firstCell.includes('說') || 
+                firstCell.includes('資料來源')) {
+                return true;
+            }
+            
+            // 檢查是否整行僅有文字說明，沒有數值資料
+            var hasNumericData = false;
+            for (var i = 1; i < row.length; i++) {
+                if (row[i] !== null && row[i] !== undefined) {
+                    // 檢查是否為數值
+                    if (typeof row[i] === 'number' || 
+                        (typeof row[i] === 'string' && !isNaN(parseFloat(row[i].replace(/,/g, ''))))) {
+                        hasNumericData = true;
+                        break;
+                    }
+                }
+            }
+            
+            // 如果沒有數值資料，且有文字資料，可能是說明行
+            return !hasNumericData && firstCell.length > 0;
+        }
+        
         // 根據特定格式提取資料 - 更新版本
         function extractDataFromSpecificFormat(jsonData) {
             var result = [];
@@ -885,7 +927,8 @@
                 }
                 
                 // 從縣市行之後開始處理鄉鎮資料
-                for (var i = cityRowIndex + 1; i < jsonData.length; i++) {
+                var nextCityFound = false;
+                for (var i = cityRowIndex + 1; i < jsonData.length && !nextCityFound; i++) {
                     var row = jsonData[i];
                     
                     // 確保行有效且有資料
@@ -896,22 +939,29 @@
                     // 跳過空行
                     if (!districtName || districtName === '') continue;
                     
+                    // 檢查是否為備註或說明行，如果是則跳過
+                    if (isNoteOrDescription(row)) {
+                        console.log('跳過備註或說明行:', row);
+                        continue;
+                    }
+                    
                     // 檢查是否已經到了下一個縣市（如果有）
-                    var isNextCity = false;
                     for (var j = 0; j < cityNames.length; j++) {
                         if (districtName.includes(cityNames[j]) && cityNames[j] !== cityName) {
-                            isNextCity = true;
+                            nextCityFound = true;
+                            console.log('找到下一個縣市:', cityNames[j], '，停止處理當前縣市資料');
                             break;
                         }
                     }
-                    if (isNextCity) break;
+                    if (nextCityFound) break;
                     
                     // 檢查是否為鄉鎮名稱
                     if (!(districtName.includes('區') || 
                          districtName.includes('鄉') || 
                          districtName.includes('鎮') || 
-                         (districtName.includes('市') && districtName.length > 3))) {
-                        // 不是鄉鎮名稱，跳過
+                         (districtName.includes('市') && districtName.length <= 3))) {
+                        // 不是鄉鎮名稱，可能是備註，跳過
+                        console.log('不是有效的鄉鎮名稱，跳過:', districtName);
                         continue;
                     }
                     
