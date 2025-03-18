@@ -41,7 +41,7 @@
         }
         button {
             padding: 8px 15px;
-            background-color: #3498db;
+            background-color: #b697c4;
             color: white;
             border: none;
             border-radius: 4px;
@@ -49,7 +49,7 @@
             margin-right: 5px;
         }
         button:hover {
-            background-color: #2980b9;
+            background-color: #755485;
         }
         #fileInfo {
             margin: 10px 0;
@@ -65,7 +65,7 @@
         .progress-bar {
             height: 100%;
             border-radius: 10px;
-            background-color: #3498db;
+            background-color: #a582b5;
             width: 0%;
             transition: width 0.3s;
         }
@@ -78,13 +78,13 @@
         .tab-button {
             padding: 10px 15px;
             border: none;
-            background-color: #f2f2f2;
+            background-color: #ddd5e0;
             cursor: pointer;
             margin-right: 5px;
             border-radius: 4px 4px 0 0;
         }
         .tab-button.active {
-            background-color: #3498db;
+            background-color: #b697c4;
             color: white;
         }
         .tab-content {
@@ -129,16 +129,16 @@
             display: none;
         }
         .success-message {
-            color: #27ae60;
-            background-color: #d4efdf;
+            color: #755485;
+            background-color: #ddd5e0;
             padding: 10px;
             border-radius: 4px;
             margin: 10px 0;
             display: none;
         }
         .info-panel {
-            background-color: #eaf2f8;
-            border-left: 4px solid #3498db;
+            background-color: #ddd5e0;
+            border-left: 4px solid #755485;
             padding: 10px 15px;
             margin: 15px 0;
             font-size: 14px;
@@ -163,7 +163,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>鄉鎮人口統計資料解析器</h1>
+        <h1>縣市鄉鎮人口統計資料處理器</h1>
         
         <div class="upload-section">
             <h2>1. 選擇檔案</h2>
