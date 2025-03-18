@@ -1,45 +1,56 @@
-<%@ page language="java" contentType="text/html; charset=UTF-8"
-    pageEncoding="UTF-8"%>
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
 <!DOCTYPE html>
 <html>
 <head>
 <meta charset="UTF-8">
 <title>Excel匯入</title>
+<script>
+function uploadFile() {
+    var fileInput = document.getElementById("selectFiles");
+    if (!fileInput.files.length) {
+        alert("請選擇一個 Excel 檔案！");
+        return;
+    }
+
+    var file = fileInput.files[0];
+    var fileName = file.name;
+    var formData = new FormData();
+    formData.append("theFirstFile", file);
+
+    // 驗證副檔名
+    var re = /\.(xls|xlsx)$/i;
+    if (!re.test(fileName)) {
+        alert("只允許上傳 xls 或 xlsx 檔案");
+        return;
+    }
+
+    // 根據副檔名決定要送到哪個 JSP
+    var uploadUrl = fileName.endsWith(".xls") ? "ExcelxlsPr.jsp" : "ExcelxlsxPr.jsp";
+
+    // 使用 AJAX 上傳
+    fetch(uploadUrl, {
+        method: "POST",
+        body: formData
+    })
+    .then(response => response.text())
+    .then(result => {
+        alert("上傳成功！");
+        console.log(result);
+    })
+    .catch(error => {
+        alert("上傳失敗！");
+        console.error(error);
+    });
+}
+</script>
 </head>
 <body>
-<form  method="post" name="form">
-	<div class="col-sm-6 text-right">
-		<label for="selectFiles" id="importBtnText" class=" btn-theme2 btn">Excel匯入</label>
-		<input type="file" class="btn-theme2 btn" id="selectFiles" onchange="javascript:del();" value="Import" name="theFirstFile"/>
-	</div>
-</form>
-
-<script>
-//判斷是否為xls或xlsx檔，並判斷是xls還是xlsx檔
-		//這裡控制要檢查的項目，true表示要檢查，false表示不檢查 
-		var isCheckType = true;//是否檢查副檔名 
-		var xlschekType = true;
-		
-		//點選提交按鈕觸發下面的函式
-		function del(){
-			var f = document.form;
-			var re = /\.(xls|xlsx)$/i;
-			var xe= /\.(xls)$/i;
-			if (isCheckType && !re.test(f.theFirstFile.value)) { 
-				alert("只允許上傳xls或xlsx檔"); 
-			} 
-			else if (xlschekType && xe.test(f.theFirstFile.value)) {
-				document.form.action="ExcelxlsPr.jsp";
-				document.form.enctype="multipart/form-data";
-				document.form.submit();	
-			}
-			else{
-				document.form.action="ExcelxlsxPr.jsp";
-				document.form.enctype="multipart/form-data";
-				document.form.submit();
-			}
-			
-			}
-</script>    
+    <form id="uploadForm" enctype="multipart/form-data">
+        <div class="col-sm-6 text-right">
+            <label for="selectFiles" class="btn-theme2 btn">Excel匯入</label>
+            <input type="file" id="selectFiles" accept=".xls,.xlsx" class="btn-theme2 btn" />
+            <button type="button" class="btn-theme2 btn" onclick="uploadFile()">上傳</button>
+        </div>
+    </form>
 </body>
 </html>
