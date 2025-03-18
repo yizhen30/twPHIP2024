@@ -42,7 +42,7 @@
         }
         button {
             padding: 8px 15px;
-            background-color: #b697c4;
+            background-color: #1A76D1;
             color: white;
             border: none;
             border-radius: 4px;
@@ -50,7 +50,8 @@
             margin-right: 5px;
         }
         button:hover {
-            background-color: #755485;
+        	color: white;
+            background-color: #76ace3;
         }
         #fileInfo {
             margin: 10px 0;
@@ -66,7 +67,7 @@
         .progress-bar {
             height: 100%;
             border-radius: 10px;
-            background-color: #a582b5;
+            background-color: #629ecc;
             width: 0%;
             transition: width 0.3s;
         }
@@ -79,13 +80,13 @@
         .tab-button {
             padding: 10px 15px;
             border: none;
-            background-color: #ddd5e0;
+            background-color: #c4dff5;
             cursor: pointer;
             margin-right: 5px;
             border-radius: 4px 4px 0 0;
         }
         .tab-button.active {
-            background-color: #b697c4;
+            background-color: #1A76D1;
             color: white;
         }
         .tab-content {
@@ -130,16 +131,16 @@
             display: none;
         }
         .success-message {
-            color: #755485;
-            background-color: #ddd5e0;
+            color: #1c4e80;
+            background-color: #dcebf7;
             padding: 10px;
             border-radius: 4px;
             margin: 10px 0;
             display: none;
         }
         .info-panel {
-            background-color: #ddd5e0;
-            border-left: 4px solid #755485;
+            background-color: #dcebf7;
+            border-left: 4px solid #1A76D1;
             padding: 10px 15px;
             margin: 15px 0;
             font-size: 14px;
